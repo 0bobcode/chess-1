@@ -1,41 +1,41 @@
-version: '3.8'
+WORKDIR /app
 
-services:
-  mongodb:
-    image: mongo:latest
-    container_name: chess-mongodb
-    restart: unless-stopped
-    ports:
-      - "27017:27017"
-    environment:
-      MONGO_INITDB_ROOT_USERNAME: admin
-      MONGO_INITDB_ROOT_PASSWORD: password
-    volumes:
-      - mongodb_data:/data/db
-    networks:
-      - chess-network
+# Copy the entire project
+COPY . .
 
-  chess-app:
-    build:
-      context: .
-      dockerfile: Dockerfile
-    container_name: chess-app
-    restart: unless-stopped
-    ports:
-      - "5173:5173"
-      - "9000:9000"
-    environment:
-      - NODE_ENV=production
-      - MONGODB_URI=mongodb://admin:password@mongodb:27017/chess?authSource=admin
-      - PORT=9000
-    depends_on:
-      - mongodb
-    networks:
-      - chess-network
+# Navigate to server and install dependencies
+WORKDIR /app/server
 
-volumes:
-  mongodb_data:
+# Install server dependencies
+RUN npm ci
 
-networks:
-  chess-network:
-    driver: bridge
+# Stage 3: Production image
+FROM node:18-alpine
+
+WORKDIR /app
+
+# Install serve to serve the client build
+RUN npm install -g serve
+
+# Copy server files from build stage
+COPY --from=server-build /app/server ./server
+
+# Copy client build from build stage
+COPY --from=client-build /app/client/dist ./client/dist
+
+# Create a startup script
+RUN echo '#!/bin/sh' > /app/start.sh && \
+    echo 'cd /app/server && node index.js &' >> /app/start.sh && \
+    echo 'cd /app/client/dist && serve -s . -l 5173' >> /app/start.sh && \
+    echo 'wait' >> /app/start.sh && \
+    chmod +x /app/start.sh
+
+# Expose ports (5173 for client, 9000 for server)
+EXPOSE 5173
+EXPOSE 9000
+
+# Set environment variables
+ENV NODE_ENV=production
+
+# Start both client and server
+CMD ["/app/start.sh"]
