@@ -21,6 +21,7 @@ export class Knight extends Piece {
       { x: 2, y: -1 },
       { x: -2, y: 1 },
       { x: -2, y: -1 },
+      
     ];
     for (const direction of directions) {
       const nextPosition: Position = {

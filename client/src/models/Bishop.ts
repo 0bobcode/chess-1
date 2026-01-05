@@ -17,6 +17,7 @@ export class Bishop extends Piece {
       { x: 1, y: -1 },
       { x: -1, y: 1 },
       { x: -1, y: -1 },
+      
     ];
     for (const direction of directions) {
       let nextPosition = {
